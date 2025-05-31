@@ -3,7 +3,6 @@ import numpy as np
 from scipy.optimize import linprog
 
 def INOUTDEGREE(G):
-    print("Running INOUTDEGREE_NEW...")
     
     U = set()
     
@@ -97,10 +96,8 @@ def INOUTDEGREE(G):
                         print(f"  A[{i}] = {A[i]}: {val}")
                     elif i < len(A) + len(E1):
                         e_idx = i - len(A)
-                        print(f"  E1[{e_idx}] = {E1[e_idx]}: {val}")
                     else:
                         e_idx = i - len(A) - len(E1)
-                        print(f"  E2[{e_idx}] = {E2[e_idx]}: {val}")
         else:
             return [], U
     except Exception as e:

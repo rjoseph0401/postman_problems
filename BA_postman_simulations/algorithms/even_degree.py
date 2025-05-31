@@ -2,7 +2,6 @@ import networkx as nx
 
 
 def EVENDEGREE(G):
-    print("Running EVENDEGREE_NEW...")
     G_prime = G.copy()
     
     #Identify vertices of odd degree without considering direction
@@ -82,7 +81,6 @@ def EVENDEGREE(G):
         if u in G_prime.nodes() and v in G_prime.nodes():
             if u in path_dict and v in path_dict[u]:
                 path = path_dict[u][v]
-                print(f"Adding path from {u} to {v}: {path}")
                 
                 for i in range(len(path) - 1):
                     curr = path[i]

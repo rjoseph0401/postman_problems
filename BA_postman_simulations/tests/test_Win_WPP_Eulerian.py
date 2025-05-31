@@ -10,7 +10,7 @@ from algorithms.Win_WPP_Eulerian import Win_WPP_Eulerian
 
 if __name__ == "__main__":
      G = nx.MultiGraph()
-     
+     #ensure G is Eulerian
      G.add_edge(0, 1, cij=2, cji=3)
      G.add_edge(1, 2, cij=1, cji=4)
      G.add_edge(2, 3, cij=3, cji=2)

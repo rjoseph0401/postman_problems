@@ -2,7 +2,6 @@ import networkx as nx
 from algorithms.adjust_cycles import ADJUSTCYCLES
 
 def EVENPARITY(G, M, U):
-    print("Running EVENPARITY...")
     
     temp_graph = nx.MultiDiGraph()
     temp_graph.add_nodes_from(G.nodes())
