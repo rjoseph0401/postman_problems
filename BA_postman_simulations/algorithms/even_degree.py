@@ -49,7 +49,6 @@ def EVENDEGREE(G):
                     shortest_paths[source][target] = lengths[target]
                     path_dict[source][target] = paths[target]
         except nx.NetworkXNoPath:
-            print(f"Warning: No path found from {source} to some vertices")
             continue
     
     #Create a complete graph of odd vertices with shortest path distances as edge weights
@@ -109,5 +108,5 @@ def EVENDEGREE(G):
             odd_count_after += 1
             print(f"Warning: Vertex {v} still has odd degree {degree} after EVENDEGREE")
     
-    print(f"EVENDEGREE_NEW completed. Vertices with odd degree: {odd_count_after}")
+    print(f"EVENDEGREE completed. Vertices with odd degree: {odd_count_after}")
     return G_prime

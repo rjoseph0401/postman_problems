@@ -16,41 +16,6 @@ sys.path.append(project_root)
 from algorithms.mixed1 import MIXED1
 from algorithms.mixed2 import MIXED2
 
-def create_hub_graph(n_nodes=20, seed=None):
-    if seed is not None:
-        random.seed(seed)
-    
-    G = nx.MultiDiGraph()
-    G.add_nodes_from(range(n_nodes))
-    
-    hub_nodes = random.sample(range(n_nodes), max(2, n_nodes // 8))
-    
-    for hub in hub_nodes:
-        for other in range(n_nodes):
-            if other != hub and random.random() < 0.7:
-                weight = random.randint(1, 15)
-                edge_type = random.choice(['out', 'in', 'undirected'])
-                
-                if edge_type == 'out':
-                    G.add_edge(hub, other, kind='directed', weight=weight)
-                elif edge_type == 'in':
-                    G.add_edge(other, hub, kind='directed', weight=weight)
-                else:
-                    G.add_edge(hub, other, kind='undirected', weight=weight)
-                    G.add_edge(other, hub, kind='undirected', weight=weight)
-    
-    non_hubs = [i for i in range(n_nodes) if i not in hub_nodes]
-    for i in range(len(non_hubs) - 1):
-        node1, node2 = non_hubs[i], non_hubs[i + 1]
-        weight = random.randint(1, 10)
-        if random.random() < 0.5:
-            G.add_edge(node1, node2, kind='directed', weight=weight)
-        else:
-            G.add_edge(node1, node2, kind='undirected', weight=weight)
-            G.add_edge(node2, node1, kind='undirected', weight=weight)
-    
-    return G
-
 def create_asymmetric_cycles_graph(n_nodes=20, seed=None):
     if seed is not None:
         random.seed(seed)
@@ -58,41 +23,126 @@ def create_asymmetric_cycles_graph(n_nodes=20, seed=None):
     G = nx.MultiDiGraph()
     G.add_nodes_from(range(n_nodes))
     
+    # Base connectivity - directed cycle
+    for i in range(n_nodes):
+        G.add_edge(i, (i + 1) % n_nodes, kind='directed', weight=random.randint(1, 5))
+    
+    # Asymmetric cycles
     cycle_size = max(3, n_nodes // 4)
     cycle_starts = [i * cycle_size for i in range(n_nodes // cycle_size)]
     
     for start in cycle_starts:
-        end = min(start + cycle_size, n_nodes)
-        cycle_nodes = list(range(start, end))
+        cycle_nodes = list(range(start, min(start + cycle_size, n_nodes)))
         
-        for i in range(len(cycle_nodes)):
-            current = cycle_nodes[i]
+        for i, current in enumerate(cycle_nodes):
             next_node = cycle_nodes[(i + 1) % len(cycle_nodes)]
             
-            G.add_edge(current, next_node, kind='directed', weight=random.randint(1, 5))
+            # Add forward edge if not in base cycle
+            if not G.has_edge(current, next_node):
+                G.add_edge(current, next_node, kind='directed', weight=random.randint(1, 5))
             
-            if random.random() < 0.3:
+            # Add reverse with higher cost
+            if random.random() < 0.3 and not G.has_edge(next_node, current):
                 G.add_edge(next_node, current, kind='directed', weight=random.randint(15, 25))
     
+    # Connect cycles with undirected edges
+    def add_cycle_connection(start1, start2, size):
+        if start2 < n_nodes:
+            node1 = start1 + random.randint(0, min(size - 1, n_nodes - start1 - 1))
+            node2 = start2 + random.randint(0, min(size - 1, n_nodes - start2 - 1))
+            weight = random.randint(5, 10)
+            
+            if not G.has_edge(node1, node2) and not G.has_edge(node2, node1):
+                G.add_edge(node1, node2, kind='undirected', weight=weight)
+                G.add_edge(node2, node1, kind='undirected', weight=weight)
+    
+    # Connect adjacent cycles
     for i in range(len(cycle_starts) - 1):
-        node1 = cycle_starts[i] + random.randint(0, cycle_size - 1)
-        node2 = cycle_starts[i + 1] + random.randint(0, min(cycle_size - 1, n_nodes - cycle_starts[i + 1] - 1))
-        weight = random.randint(5, 10)
-        G.add_edge(node1, node2, kind='undirected', weight=weight)
-        G.add_edge(node2, node1, kind='undirected', weight=weight)
+        add_cycle_connection(cycle_starts[i], cycle_starts[i + 1], cycle_size)
+    
+    # Connect first and last cycle
+    if len(cycle_starts) > 1:
+        add_cycle_connection(cycle_starts[0], cycle_starts[-1], cycle_size)
+    return G
+
+
+
+def create_long_path_graph(n_nodes=20, seed=None):
+    if seed is not None:
+        random.seed(seed)
+    
+    G = nx.MultiDiGraph()
+    G.add_nodes_from(range(n_nodes))
+    
+    # Create a long directed path as the main structure
+    path_length = n_nodes - 2
+    path_nodes = list(range(path_length))
+    
+    # Main directed path with low weights
+    for i in range(path_length - 1):
+        G.add_edge(path_nodes[i], path_nodes[i + 1], kind='directed', weight=1)
+    
+    # Add expensive reverse edges on the path
+    for i in range(1, path_length - 1, 2):  
+        if random.random() < 0.6:
+            G.add_edge(path_nodes[i + 1], path_nodes[i], kind='directed', weight=random.randint(20, 30))
+    
+    # Create side branches that require backtracking
+    side_nodes = list(range(path_length, n_nodes))
+    for side_node in side_nodes:
+        # Connect side node to a random point on the main path
+        attach_point = random.choice(path_nodes[1:-1])
+        
+        # Directed connection from path to side (cheap)
+        G.add_edge(attach_point, side_node, kind='directed', weight=random.randint(1, 3))
+        # Expensive return path
+        G.add_edge(side_node, attach_point, kind='directed', weight=random.randint(15, 25))
+        
+        if random.random() < 0.4:
+            other_point = random.choice([p for p in path_nodes if p != attach_point])
+            weight = random.randint(12, 18)
+            G.add_edge(side_node, other_point, kind='undirected', weight=weight)
+            G.add_edge(other_point, side_node, kind='undirected', weight=weight)
+    
+    # Ensure strong connectivity
+    if path_length > 2:
+        G.add_edge(path_nodes[-1], path_nodes[0], kind='directed', weight=random.randint(5, 10))
     
     return G
 
-def calculate_directed_ratio(G):
-    directed_count = sum(1 for _, _, data in G.edges(data=True) if data.get('kind') == 'directed')
-    undirected_count = sum(1 for _, _, data in G.edges(data=True) if data.get('kind') == 'undirected') // 2
-    total_edges = directed_count + undirected_count
-    return directed_count / total_edges if total_edges > 0 else 0
+
+
+def ensure_connectivity(G):
+    underlying_graph = nx.Graph()
+    underlying_graph.add_nodes_from(G.nodes())
+    for u, v, data in G.edges(data=True):
+        underlying_graph.add_edge(u, v)
+    
+    if not nx.is_connected(underlying_graph):
+        components = list(nx.connected_components(underlying_graph))
+        for i in range(len(components) - 1):
+            node1, node2 = random.choice(list(components[i])), random.choice(list(components[i + 1]))
+            G.add_edge(node1, node2, kind='undirected', weight=1)
+            G.add_edge(node2, node1, kind='undirected', weight=1)
+    
+    return G
+
+def validate_graph_solvability(G):
+    underlying_graph = nx.Graph()
+    underlying_graph.add_nodes_from(G.nodes())
+    for u, v, data in G.edges(data=True):
+        underlying_graph.add_edge(u, v)
+    
+    if not nx.is_connected(underlying_graph):
+        return False, "Graph is not connected"
+    
+    return True, "Graph is valid"
 
 def calculate_cost(circuit, original_graph=None):
     if not circuit:
         return float('inf')
     
+    #MIXED1 format
     if isinstance(circuit, tuple) and len(circuit) == 2:
         G_prime, circuit_list = circuit
         if not circuit_list:
@@ -100,118 +150,87 @@ def calculate_cost(circuit, original_graph=None):
         
         total_cost = 0
         for u, v in circuit_list:
-            weight = 1
-            if G_prime.has_edge(u, v):
-                edge_data = G_prime.get_edge_data(u, v)
-                if isinstance(edge_data, dict):
-                    if 0 in edge_data:
-                        weight = edge_data[0].get('weight', 1)
-                    else:
-                        weight = edge_data.get('weight', 1)
+            edge_data = G_prime.get_edge_data(u, v)
+            if edge_data and isinstance(edge_data, dict):
+                if 0 in edge_data:
+                    weight = edge_data[0].get('weight', 1)
+                else:
+                    weight = edge_data.get('weight', 1)
+            else:
+                weight = 1
             total_cost += weight
         return total_cost
     
+    #MIXED2 format
     if isinstance(circuit, list) and circuit:
         if len(circuit[0]) >= 4:
             return sum(weight for _, _, _, weight in circuit)
-        elif len(circuit[0]) == 2:
-            if original_graph is not None:
-                total_cost = 0
-                for u, v in circuit:
-                    weight = 1
-                    for graph_edge in [original_graph.get_edge_data(u, v), original_graph.get_edge_data(v, u)]:
-                        if graph_edge:
-                            if 0 in graph_edge:
-                                weight = graph_edge[0].get('weight', 1)
-                            else:
-                                weight = graph_edge.get('weight', 1)
-                            break
-                    total_cost += weight
-                return total_cost
-            else:
-                return len(circuit)
+        elif len(circuit[0]) == 2 and original_graph:
+            total_cost = 0
+            for u, v in circuit:
+                weight = 1
+                for edge_data in [original_graph.get_edge_data(u, v), original_graph.get_edge_data(v, u)]:
+                    if edge_data and isinstance(edge_data, dict):
+                        if 0 in edge_data:
+                            weight = edge_data[0].get('weight', 1)
+                        else:
+                            weight = edge_data.get('weight', 1)
+                        break
+                total_cost += weight
+            return total_cost
+        else:
+            return len(circuit)
     
     return float('inf')
 
-def run_extreme_case_simulations(repetitions=5):
+def run_extreme_case_simulations(repetitions=3):
     results = []
     extreme_cases = [
-        ("High-Degree Hubs", create_hub_graph),
+        ("Long Path with Detours", create_long_path_graph),
         ("Asymmetric Directed Cycles", create_asymmetric_cycles_graph)
     ]
     
-    node_sizes = [10, 15, 20, 30]
+    node_sizes = [10, 15, 20, 30, 40, 50, 75, 100]
     
     for case_name, graph_generator in tqdm(extreme_cases, desc="Testing extreme cases"):
         for n_nodes in tqdm(node_sizes, desc=f"Testing {case_name}", leave=False):
             for rep in range(repetitions):
                 seed = 42 * n_nodes * (rep + 1)
                 
-                # Generate graph
+                # Generate and ensure solvable graph
                 G = graph_generator(n_nodes=n_nodes, seed=seed)
-                directed_ratio = calculate_directed_ratio(G)
+                G = ensure_connectivity(G)
                 
+                # Calculate graph statistics
                 directed_count = sum(1 for _, _, data in G.edges(data=True) if data.get('kind') == 'directed')
                 undirected_count = sum(1 for _, _, data in G.edges(data=True) if data.get('kind') == 'undirected') // 2
-                total_edge_count = directed_count + undirected_count
+                total_edges = directed_count + undirected_count
                 
                 result = {
                     'case_name': case_name,
                     'nodes': n_nodes,
-                    'directed_edges': directed_count,
-                    'undirected_edges': undirected_count,
-                    'total_edges': total_edge_count,
-                    'directed_ratio': directed_ratio,
-                    'rep': rep,
-                    'seed': seed,
+                    'total_edges': total_edges,
+                    'rep': rep
                 }
-                  # Test MIXED1
-                try:
-                    G1 = copy.deepcopy(G)
-                    start_time = time.time()
-                    circuit1 = MIXED1(G1)
-                    mixed1_new_time = time.time() - start_time
-                    
-                    cost1 = calculate_cost(circuit1, G)
-                    if cost1 != float('inf') and cost1 is not None:
-                        result['mixed1_new_time'] = mixed1_new_time
-                        result['mixed1_new_cost'] = cost1
-                    else:
-                        result['mixed1_new_time'] = None
-                        result['mixed1_new_cost'] = np.nan
-                except Exception as e:
-                    print(f"MIXED1_NEW error: {case_name}, {n_nodes} nodes: {str(e)}")
-                    result['mixed1_new_time'] = None
-                    result['mixed1_new_cost'] = np.nan
                 
-                # Test MIXED2_NEW
-                try:
-                    G2 = copy.deepcopy(G)
-                    start_time = time.time()
-                    circuit2 = MIXED2(G2)
-                    mixed2_new_time = time.time() - start_time
-                    
-                    cost2 = calculate_cost(circuit2, G)
-                    if cost2 != float('inf') and cost2 is not None:
-                        result['mixed2_new_time'] = mixed2_new_time
-                        result['mixed2_new_cost'] = cost2
-                    else:
-                        result['mixed2_new_time'] = None
-                        result['mixed2_new_cost'] = np.nan
-                except Exception as e:
-                    print(f"MIXED2_NEW error: {case_name}, {n_nodes} nodes: {str(e)}")
-                    result['mixed2_new_time'] = None
-                    result['mixed2_new_cost'] = np.nan
-                  # Calculate relative performance
-                if (pd.notnull(result.get('mixed1_new_cost')) and 
-                    pd.notnull(result.get('mixed2_new_cost')) and
-                    result['mixed1_new_cost'] > 0):
-                    result['cost_diff_percent'] = ((result['mixed2_new_cost'] - result['mixed1_new_cost']) / result['mixed1_new_cost']) * 100
-                
-                if (pd.notnull(result.get('mixed1_new_time')) and 
-                    pd.notnull(result.get('mixed2_new_time')) and
-                    result['mixed1_new_time'] > 0):
-                    result['time_diff_percent'] = ((result['mixed2_new_time'] - result['mixed1_new_time']) / result['mixed1_new_time']) * 100
+                # Test both algorithms
+                for alg_name, algorithm in [('mixed1', MIXED1), ('mixed2', MIXED2)]:
+                    try:
+                        G_copy = copy.deepcopy(G)
+                        start_time = time.time()
+                        circuit = algorithm(G_copy)
+                        runtime = time.time() - start_time
+                        
+                        cost = calculate_cost(circuit, G)
+                        if cost != float('inf') and cost is not None:
+                            result[f'{alg_name}_time'] = runtime
+                            result[f'{alg_name}_cost'] = cost
+                        else:
+                            result[f'{alg_name}_time'] = None
+                            result[f'{alg_name}_cost'] = np.nan
+                    except Exception:
+                        result[f'{alg_name}_time'] = None
+                        result[f'{alg_name}_cost'] = np.nan
                 
                 results.append(result)
     
@@ -221,108 +240,72 @@ def plot_extreme_case_results(results):
     df = pd.DataFrame(results) if not isinstance(results, pd.DataFrame) else results
     df = df.replace([float('inf'), np.inf], np.nan)
     
-    selected_cases = ["High-Degree Hubs", "Asymmetric Directed Cycles"]
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    available_cases = df['case_name'].unique()
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    for i, case_name in enumerate(selected_cases):
-        case_df = df[df['case_name'] == case_name]
-        grouped = case_df.groupby('total_edges').agg({
-            'mixed1_new_cost': 'mean',
-            'mixed2_new_cost': 'mean',
-            'mixed1_new_time': 'mean',
-            'mixed2_new_time': 'mean'
+    for i, case_name in enumerate(available_cases):
+        case_data = df[df['case_name'] == case_name].groupby('total_edges').agg({
+            'mixed1_cost': 'mean', 'mixed2_cost': 'mean',
+            'mixed1_time': 'mean', 'mixed2_time': 'mean'
         }).reset_index().sort_values('total_edges')
         
-        valid_costs = grouped.dropna(subset=['mixed1_new_cost', 'mixed2_new_cost'])
-        valid_times = grouped.dropna(subset=['mixed1_new_time', 'mixed2_new_time'])
+        # Cost comparison plot
+        cost_data = case_data.dropna(subset=['mixed1_cost', 'mixed2_cost'])
+        if not cost_data.empty:
+            for j, (alg, color, marker) in enumerate([('mixed1', 'blue', 'o'), ('mixed2', 'red', 's')]):
+                axes[0, i].plot(cost_data['total_edges'], cost_data[f'{alg}_cost'], 
+                               f'{marker}-', color=color, linewidth=2, markersize=6, 
+                               label=f'MIXED{j+1}')
+            axes[0, i].legend()
         
-        # Plot cost comparisons
-        if not valid_costs.empty:
-            axes[0, i].plot(valid_costs['total_edges'], valid_costs['mixed1_new_cost'], 'o-', 
-                            color='blue', linewidth=2, markersize=8, label='MIXED1')
-            axes[0, i].plot(valid_costs['total_edges'], valid_costs['mixed2_new_cost'], 's-', 
-                            color='red', linewidth=2, markersize=8, label='MIXED2')
-        
-        axes[0, i].set_xlabel('Number of Edges', fontsize=12)
-        axes[0, i].set_ylabel('Tour Cost', fontsize=12)
-        axes[0, i].set_title(f'Cost Comparison: {case_name}', fontsize=14)
-        axes[0, i].legend(fontsize=11)
+        axes[0, i].set(xlabel='Number of Edges', ylabel='Tour Cost', 
+                      title=f'Cost: {case_name}')
         axes[0, i].grid(True, alpha=0.3)
         
-        # Plot runtime comparisons 
-        if not valid_times.empty:
-            axes[1, i].plot(valid_times['total_edges'], valid_times['mixed1_new_time'], 'o-',
-                           color='blue', linewidth=2, markersize=8, label='MIXED1')
-            axes[1, i].plot(valid_times['total_edges'], valid_times['mixed2_new_time'], 's-',
-                           color='red', linewidth=2, markersize=8, label='MIXED2')
+        # Runtime comparison plot
+        time_data = case_data.dropna(subset=['mixed1_time', 'mixed2_time'])
+        if not time_data.empty:
+            for j, (alg, color, marker) in enumerate([('mixed1', 'blue', 'o'), ('mixed2', 'red', 's')]):
+                axes[1, i].plot(time_data['total_edges'], time_data[f'{alg}_time'], 
+                               f'{marker}-', color=color, linewidth=2, markersize=6, 
+                               label=f'MIXED{j+1}')
+            axes[1, i].legend()
         
-        axes[1, i].set_xlabel('Number of Edges', fontsize=12)
-        axes[1, i].set_ylabel('Runtime (seconds)', fontsize=12)
-        axes[1, i].set_title(f'Runtime Comparison: {case_name}', fontsize=14)
-        axes[1, i].legend(fontsize=11)
+        axes[1, i].set(xlabel='Number of Edges', ylabel='Runtime (seconds)', 
+                      title=f'Runtime: {case_name}')
         axes[1, i].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    
     return fig
 
 
 def main():
-    print("Starting extreme case simulations for MIXED1_NEW and MIXED2_NEW algorithms...")
-    print("=" * 80)
+    print("Testing MIXED1 vs MIXED2 on Long Path and Asymmetric Cycles...")
+    print("=" * 60)
     
-    repetitions = 5
-
-    results = run_extreme_case_simulations(repetitions)
+    # Run simulations
+    results = run_extreme_case_simulations(repetitions=3)
     
+    # Generate plots
     fig = plot_extreme_case_results(results)
     
+    # Print concise summary
     print("\nSummary by case:")
     summary = results.groupby('case_name').agg({
-        'mixed1_new_cost': ['mean', 'min', 'max'],
-        'mixed2_new_cost': ['mean', 'min', 'max'],
-        'mixed1_new_time': ['mean', 'min', 'max'],
-        'mixed2_new_time': ['mean', 'min', 'max'],
-        'cost_diff_percent': ['mean', 'min', 'max'],
-    })
+        'mixed1_cost': 'mean', 'mixed2_cost': 'mean',
+        'mixed1_time': 'mean', 'mixed2_time': 'mean'
+    }).round(3)
     print(summary)
     
-    significant_diff = results[abs(results['cost_diff_percent']) > 10].sort_values('cost_diff_percent', ascending=False)
-    
-    print("\nInstances with significant differences (>10% cost difference):")
-    if not significant_diff.empty:
-        significant_summary = significant_diff.groupby('case_name').agg({
-            'cost_diff_percent': ['count', 'mean', 'min', 'max']
-        })
-        print(significant_summary)
-        
-        print("\nTop 5 most extreme differences:")
-        print(significant_diff[['case_name', 'nodes', 'directed_ratio', 'mixed1_new_cost', 'mixed2_new_cost', 'cost_diff_percent']].head(5))
-    else:
-        print("No instances with >10% cost difference found.")
-    
-    # Performance comparison summary
-    print("\nPerformance Comparison Summary:")
-    print("-" * 50)
-    
-    # Success rates
-    mixed1_new_success = results['mixed1_new_time'].notna().sum()
-    mixed2_new_success = results['mixed2_new_time'].notna().sum()
-    total_tests = len(results)
-    
-    print(f"\nSuccess Rates:")
-    print(f"MIXED1: {mixed1_new_success}/{total_tests} ({100*mixed1_new_success/total_tests:.1f}%)")
-    print(f"MIXED2: {mixed2_new_success}/{total_tests} ({100*mixed2_new_success/total_tests:.1f}%)")
-    
-    # Cost and time ratios
-    valid_comparisons = results.dropna(subset=['mixed1_new_cost', 'mixed2_new_cost', 'mixed1_new_time', 'mixed2_new_time'])
+    # Performance comparison
+    valid_comparisons = results.dropna(subset=['mixed1_cost', 'mixed2_cost'])
     if len(valid_comparisons) > 0:
-        avg_cost_ratio = (valid_comparisons['mixed2_new_cost'] / valid_comparisons['mixed1_new_cost']).mean()
-        avg_time_ratio = (valid_comparisons['mixed2_new_time'] / valid_comparisons['mixed1_new_time']).mean()
+        cost_ratio = (valid_comparisons['mixed2_cost'] / valid_comparisons['mixed1_cost']).mean()
+        time_ratio = (valid_comparisons['mixed2_time'] / valid_comparisons['mixed1_time']).mean()
         
-        print(f"\nAverage Ratios (MIXED2/MIXED1):")
-        print(f"Cost ratio: {avg_cost_ratio:.3f}")
-        print(f"Time ratio: {avg_time_ratio:.3f}")
+        print(f"\nAverage Performance Ratios (MIXED2/MIXED1):")
+        print(f"Cost ratio: {cost_ratio:.3f}")
+        print(f"Time ratio: {time_ratio:.3f}")
     
     plt.show()
 

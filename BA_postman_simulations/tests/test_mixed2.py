@@ -25,6 +25,7 @@ if __name__ == "__main__":
     G.add_edge(2, 4, kind='directed')
     G.add_edge(4, 2, kind='directed')
     G.add_edge(0, 1, kind='undirected')
+    G.add_edge(1, 2, kind='undirected')
 
     print("\nRunning MIXED2 Algorithm...")
     try:

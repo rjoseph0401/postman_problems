@@ -147,6 +147,6 @@ def INOUTDEGREE(G):
             canonical_edge = (min(u, v), max(u, v))
             U.add(canonical_edge)
     
-    print(f"INOUTDEGREE_NEW completed.")
+    print(f"INOUTDEGREE completed.")
     
     return M, U
