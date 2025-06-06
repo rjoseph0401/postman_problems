@@ -62,7 +62,6 @@ def EVENDEGREE(G):
                     matching_graph.add_edge(u, v, weight=weight)
     
     if len(odd_vertices) % 2 == 1:
-        print("Warning: Odd number of odd-degree vertices. Adding a dummy vertex.")
         dummy_node = max(G_prime.nodes()) + 1
         for v in odd_vertices:
             matching_graph.add_edge(dummy_node, v, weight=0)
@@ -73,7 +72,7 @@ def EVENDEGREE(G):
         matching = nx.algorithms.matching.min_weight_matching(matching_graph)
     except Exception as e:
         print(f"Error in min_weight_matching: {str(e)}")
-        # Fallback matching
+        # Fallback matching, just as test case
         matching = [(odd_vertices[i], odd_vertices[i+1]) for i in range(0, len(odd_vertices), 2)]
     
     for u, v in matching:
@@ -98,15 +97,5 @@ def EVENDEGREE(G):
                         edge_weight = 1
                         G_prime.add_edge(curr, next_node, directed=True, kind='directed', weight=edge_weight)
     
-    odd_count_after = 0
-    for v in G_prime.nodes():
-        degree = 0
-        for u, w, data in G_prime.edges(data=True):
-            if u == v or w == v:
-                degree += 1
-        if degree % 2 == 1:
-            odd_count_after += 1
-            print(f"Warning: Vertex {v} still has odd degree {degree} after EVENDEGREE")
     
-    print(f"EVENDEGREE completed. Vertices with odd degree: {odd_count_after}")
     return G_prime

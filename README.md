@@ -13,9 +13,9 @@ Includes basic test cases to verify the correctness of the implemented algorithm
 ### `simulations/`
 Scripts for running the simulation experiments referenced in the thesis:
 
-- `compare_fleury_hierholzer.py` — Generates **Figure 6**
-- `compare_mixed1_mixed2.py` — Generates **Figure 7**
-- `extreme_cases_mixed1_mixed2.py` — Generates **Figure 8**
-- `compare_mixed1_BnB.py` — Generates **Figure 9**
-- `compare_Win_BnB.py` — Generates **Figure 10**
-- `compare_BnB_algorithms.py` — Generates **Figure 11**
+- `compare_fleury_hierholzer.py` — Generates **Figure 8**
+- `compare_mixed1_mixed2.py` — Generates **Figure 9**
+- `extreme_cases_mixed1_mixed2.py` — Generates **Figure 10**
+- `compare_mixed1_BnB.py` — Generates **Figure 11**
+- `compare_Win_BnB.py` — Generates **Figure 12**
+- `compare_BnB_algorithms.py` — Generates **Figure 13**
