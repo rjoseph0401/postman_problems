@@ -250,10 +250,10 @@ def main():
     # Print summary statistics
     print("\nSummary by edge count:")
     summary_by_edges = results.groupby('edges').agg({
-        'mixed1_new_time': ['mean', 'std'],
-        'mixed2_new_time': ['mean', 'std'],
-        'mixed1_new_cost': ['mean', 'std'],
-        'mixed2_new_cost': ['mean', 'std'],
+        'mixed1_new_time': ['mean'],
+        'mixed2_new_time': ['mean'],
+        'mixed1_new_cost': ['mean'],
+        'mixed2_new_cost': ['mean'],
     })
     print(summary_by_edges)
     

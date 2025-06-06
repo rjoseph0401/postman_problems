@@ -78,9 +78,6 @@ def EVENPARITY(G, M, U):
         if not is_balanced or not is_even:
             all_balanced = False
     
-    if all_balanced:
-        print("  All vertices have even degree and balanced in/out degree!")
-    
     print(f"EVENPARITY completed.")
     
     return M_prime, U_prime

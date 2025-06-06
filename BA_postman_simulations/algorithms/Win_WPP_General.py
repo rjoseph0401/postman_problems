@@ -70,6 +70,5 @@ def Win_WPP_General(G):
         print(f"Error: Augmented graph still has odd degree vertices: {odd_after}")
         return None
     
-    print(f"\n✓ Augmented graph is Eulerian, calling win_wpp_eulerian_algorithm...")
     return Win_WPP_Eulerian(augmented_G)
 
